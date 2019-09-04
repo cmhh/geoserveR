@@ -1,0 +1,15 @@
+Package: geoserveR
+Type: Package
+Title: Tools for working with GeoServer
+Version: 0.1.0
+Authors@R: person("Chris", "Hansen", role = c("aut", "cre"), email = "cmhhansen@outlook.com")
+Description: Tools for working with GeoServer, built on the GeoServer REST API.
+Depends:
+  R6 (>= 2.4.0),
+  httr
+License: MIT
+Encoding: UTF-8
+LazyLoad: yes
+LazyData: yes
+VignetteBuilder: knitr
+RoxygenNote: 6.1.1
