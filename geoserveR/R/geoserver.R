@@ -28,7 +28,7 @@ GeoServer <- R6::R6Class(
   "GeoServer",
 
   public = list(
-    initialise = function(server, username, password) {
+    initialize = function(server, username, password) {
       if (!missing(server)) self$server <- server
       if (!missing(username)) private$username <- username
       if (!missing(password)) private$password <- password

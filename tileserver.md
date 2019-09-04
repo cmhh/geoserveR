@@ -334,7 +334,7 @@ Saved as a stand-alone HTML file, this weighs in at over 15MB, and can be sluggi
 To make meshblocks available as a service, we first add a datastore.  We can add this in R as follows:
 
 ```r
-gs$createDataStore(mb2018, "statsnz", "mb2018")
+gs$createDatastore(mb2018, "statsnz", "mb2018")
 ```
 
 Internally, this creates a copy of the `mb2018` feature class as a GeoPackage, and then uploads it to the server via the `datastores` endpoint.  We then make a layer in R as follows:
@@ -459,7 +459,7 @@ curl \
 To add the meshblock feature set as a datastore, we ran the following in R:
 
 ```r
-gs$createDataStore(mb2018, "statsnz", "mb2018", "mb2018.gpkg")
+gs$createDatastore(mb2018, "statsnz", "mb2018", "mb2018.gpkg")
 ```
 
 Internally, this results in `mb2018` first being saved as a temporary GeoPackage, before being uploaded via the `datastores` endpoint.  If we wanted to do this manually, we'd first create the GeoPackage in R:
