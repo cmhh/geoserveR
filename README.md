@@ -129,100 +129,6 @@ which yields the following:
 ![states](img/states.png)
 
 
-<!--
-## Listing layers programmatically 
-
-While we got to the point where we were able to display a simple feature set on a map, the process was less than ideal.  We really want to be able to discover everything programmatically.  Well, GeoServer has a [REST API](https://docs.geoserver.org/stable/en/user/rest/) we can use to do just that.  To list the available features:
-
-```bash
-$ curl -s -u admin:geoserver -X GET \
-    http://localhost:8080/geoserver/rest/workspaces | jq '.'
-```
-```json
-{
-  "workspaces": {
-    "workspace": [
-      ...
-      {
-        "name": "topp",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp.json"
-      },
-      ...
-    ]
-  }
-}
-```
-
-Then, to list the available layers for a given feature:
-
-```bash
-$ curl -s -u admin:geoserver -X GET \
-    http://localhost:8080/geoserver/rest/workspaces/topp/layers | jq '.'
-```
-```json
-{
-  "layers": {
-    "layer": [
-      {
-        "name": "states",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp/layers/states.json"
-      },
-      {
-        "name": "tasmania_cities",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp/layers/tasmania_cities.json"
-      },
-      {
-        "name": "tasmania_roads",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp/layers/tasmania_roads.json"
-      },
-      {
-        "name": "tasmania_state_boundaries",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp/layers/tasmania_state_boundaries.json"
-      },
-      {
-        "name": "tasmania_water_bodies",
-        "href": "http://localhost:8080/geoserver/rest/workspaces/topp/layers/tasmania_water_bodies.json"
-      }
-    ]
-  }
-}
-```
-
-Note, it is possible to list _all_ layers regardless of workspace, but the names are reported in a slightly different format:
-
-```bash
-$ curl -s -u admin:geoserver -X GET http://localhost:8080/geoserver/rest/layers | jq '.'
-```
-```json
-{
-  "layers": {
-    "layer": [
-      {
-        "name": "tiger:giant_polygon",
-        "href": "http://localhost:8080/geoserver/rest/layers/tiger%3Agiant_polygon.json"
-      },
-      ...
-      {
-        "name": "nurc:Arc_Sample",
-        "href": "http://localhost:8080/geoserver/rest/layers/nurc%3AArc_Sample.json"
-      },
-      ...
-      {
-        "name": "topp:states",
-        "href": "http://localhost:8080/geoserver/rest/layers/topp%3Astates.json"
-      },
-      ...
-      {
-        "name": "sf:archsites",
-        "href": "http://localhost:8080/geoserver/rest/layers/sf%3Aarchsites.json"
-      },
-      ...
-    ]
-  }
-}
-```
--->
-
 ## An R client library
 
 Our use case is to create styled tiles services, entirely from within R.  To simplify the discussion, a simple R package is provided which:
@@ -334,7 +240,7 @@ Saved as a stand-alone HTML file, this weighs in at over 15MB, and can be sluggi
 To make meshblocks available as a service, we first add a datastore.  We can add this in R as follows:
 
 ```r
-gs$createDataStore(mb2018, "statsnz", "mb2018")
+gs$createDatastore(mb2018, "statsnz", "mb2018")
 ```
 
 Internally, this creates a copy of the `mb2018` feature class as a GeoPackage, and then uploads it to the server via the `datastores` endpoint.  We then make a layer in R as follows:
@@ -418,7 +324,74 @@ The resulting HTML file weighs in at 3.2MB&ndash;not enormous by any stretch, bu
 
 Let us instead see if we can create a workspace in GeoServer which contains a layer for each year.  As a WMS, the layers will cease to be interactive (so no hovering tooltips), but we could at least render a label whenever the user zooms in close enough, so let's do that too.
 
-**to do**
+First, we create a version of the SA2 feature class that has population counts:
+
+```r
+library(dplyr)
+library(reshape2)
+
+counts <- popdata %>%
+  dplyr::filter(geography == "sa22018") %>%
+  dplyr::select(-geography)
+
+counts_wide <- counts %>%
+  reshape2::dcast(code ~ year, value.var = "value") %>%
+  data.frame # this is deliberate so years are like X1996 rather than `1996`
+
+sa22018_with_counts <- sa22018 %>%
+  inner_join(counts_wide, by = "code")
+```
+
+Then, we create a data store using the feature class created, and add a new layer for each of the columns:
+
+```r
+gs <- GeoServer$new()
+
+gs$createDatastore(sa22018_with_counts, "statsnz", "sa22018_with_counts")
+
+years <- c(1996, 2001, 2006:2018)
+
+for (year in years) {
+  col <- sprintf("X%s", year)
+  name <- sprintf("sa22018_%s", year)
+  style <- create_polygon_fills(sa22018_with_counts, col, "geom", "label")
+  gs$createLayer("statsnz", "sa22018_with_counts", name, style) 
+}
+```
+
+And that's it&mdash;we now have a bunch of new layers called `sa22018_1996`, and so on.  There's a little bit going on under the hood, of course, but either way we can now use the resulting WMS layers as follows:
+
+```r
+m <- leaflet() %>%
+  fitBounds(lng1 = 164.45, lng2 = 179.35, lat1 = -48.52, lat2 = -33.22) %>%
+  addTiles(
+    urlTemplate = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+  )
+
+for (year in years) {
+  m <- m %>%
+    addWMSTiles(
+      "http://localhost:8080/geoserver/statsnz/wms?",
+      layers = sprintf("sa22018_%s", year),
+      options = WMSTileOptions(format = "image/png", transparent = TRUE),
+      group = as.character(year)
+    ) %>%
+    hideGroup(as.character(year))
+}
+
+m %>%
+  addLayersControl(
+    overlayGroups = as.character(years),
+    options = layersControlOptions(collapsed = TRUE)
+  ) %>%
+  showGroup(as.character(tail(years, 1)))
+```
+
+which yields:
+
+![sa22018_with_counts](img/leaflet05.png)
+
+![sa22018_with_counts](img/leaflet06.png)
 
 
 <!--
@@ -459,7 +432,7 @@ curl \
 To add the meshblock feature set as a datastore, we ran the following in R:
 
 ```r
-gs$createDataStore(mb2018, "statsnz", "mb2018", "mb2018.gpkg")
+gs$createDatastore(mb2018, "statsnz", "mb2018", "mb2018.gpkg")
 ```
 
 Internally, this results in `mb2018` first being saved as a temporary GeoPackage, before being uploaded via the `datastores` endpoint.  If we wanted to do this manually, we'd first create the GeoPackage in R:
