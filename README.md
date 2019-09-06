@@ -46,9 +46,15 @@ In addition, we also combine this with contextual information found on [NZ.Stat]
 * [Subnational population estimates (TA, SA2), by age and sex, at 30 June 1996, 2001, 2006-18 (2018 boundaries)](http://nzdotstat.stats.govt.nz/wbos/Index.aspx?DataSetCode=TABLECODE7980)
 
 
-## 'Installing' GeoServer
+## Installation
 
-We can get GeoServer up and running easily using Docker.  There is [no shortage of existing images online](https://wiki.osgeo.org/wiki/DockerImages), but we'll build our own.  We do this because it's pretty straight forward, and because it's instructive.  To build our container, we create a folder `geoserver`, and populate it with a single file, `Dockerfile`, containing the following:
+To install the R package used throughout this document, simply run:
+
+```r
+devtools::install_github("cmhh/geoserveR")
+```
+
+The R package requires a running instance of GeoServer to be useful.  We can get GeoServer up and running easily using Docker.  There is [no shortage of existing images online](https://wiki.osgeo.org/wiki/DockerImages), but we'll build our own.  We do this because it's pretty straight forward, and because it's instructive.  The R package contains a Dockerfile in `docker/Dockerfile` as follows:
 
 ```dockerfile
 FROM ubuntu:18.04
@@ -78,13 +84,14 @@ EXPOSE 8080
 CMD ["sh", "/usr/local/geoserver/bin/startup.sh"]
 ```
 
-To build the image, simply run:
+The R package can be used to generate the command required to build the image since the location of `Dockerfile` will vary depending on the user's setup.  For example:
 
-```bash
-$ docker build -t geoserver ./geoserver
+```r
+> geoserveR::docker_build(tag = 'geoserver')
+docker build -t geoserver "/home/cmhh/R/x86_64-pc-linux-gnu-library/3.5/geoserveR/docker"
 ```
 
-To start the container running, run:
+Running the resulting command at the terminal will result in the creation of an image called, in this case, `geoserver`.  We can start this via:
 
 ```bash
 $ docker run -d --name geoserver --rm -p 8080:8080 geoserver

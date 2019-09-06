@@ -28,7 +28,7 @@ years <- c(1996, 2001, 2006:2018)
 for (year in years) {
   col <- sprintf("X%s", year)
   name <- sprintf("sa22018_%s", year)
-  style <- create_polygon_fills(sa22018_with_counts, col, "geom", "label")
+  style <- create_polygon_fills(sa22018_with_counts, col, "geom", "label", pal = "YlOrRd")
   gs$createLayer("statsnz", "sa22018_with_counts", name, style)
 }
 
@@ -57,6 +57,8 @@ m <- m %>%
     options = layersControlOptions(collapsed = TRUE)
   ) %>%
   showGroup(as.character(tail(years, 1)))
+
+m
 
 # tidy up ----------------------------------------------------------------------
 rm(gs, counts, counts_wide, sa22018_with_counts, style)
