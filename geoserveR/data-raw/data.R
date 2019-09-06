@@ -8,6 +8,7 @@ x <-
   read_csv(
     file = "data-raw/TABLECODE7979_Data_8243d362-2d6a-4673-874e-850235d63cd1.csv"
   ) %>%
+  filter(!AREA %in% c("NZRC", "NIRC", "SIRC")) %>%
   select(-AGE, -SEX, -Flags) %>%
   mutate(geography = ifelse (nchar(AREA) == 2, "regc2018", "sa22018")) %>%
   rename(code = AREA) %>%
@@ -18,6 +19,7 @@ y <-
   read_csv(
     file = "data-raw/TABLECODE7980_Data_3ed576cb-a733-4e06-80ef-5bc8264d8d27.csv"
   ) %>%
+  filter(!AREA %in% c("NZTA")) %>%
   select(-AGE, -SEX, -Flags) %>%
   filter(nchar(AREA) == 3) %>%
   mutate(geography = "ta2018") %>%
@@ -26,7 +28,8 @@ y <-
   select(geography, code, year, value)
 
 popdata <- rbind(x, y) %>%
-  arrange(geography, code, year)
+  arrange(geography, code, year) %>%
+  data.frame
 
 
 # spatial data -----------------------------------------------------------------

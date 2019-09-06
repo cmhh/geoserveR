@@ -214,6 +214,7 @@ GeoServer <- R6::R6Class(
     },
     post = function(url, ..., body, encode = "json", okay = c(201), f = httr::content) {
       res <- httr::POST(url, config = private$auth(), ..., body = body, encode = encode)
+      assign("foo", list(url, body, encode, res), envir = .GlobalEnv)
       if (!res$status_code %in% okay) NULL
       else f(res)
     },
