@@ -102,7 +102,8 @@ GeoServer <- R6::R6Class(
     createWorkspace = function(workspace) {
       self$post(
         sprintf("%s/rest/workspaces", self$server),
-        body = list(workspace = list(name = workspace))
+        body = list(workspace = list(name = workspace)),
+        f = function(x) x$headers$location
       )
     },
     createDatastore = function(obj, workspace, datastore = deparse(substitute(obj)),
@@ -117,19 +118,29 @@ GeoServer <- R6::R6Class(
         url, configure, update, charset, file
       )
       fname <- tempfile(fileext = ".gpkg")
-      sf::st_write(obj, fname, datastore)
-      self$putfile(url, fname)
+      sf::st_write(obj, fname, datastore, quiet = TRUE)
+      # API docs say there should be a header called location, but there isn't
+      # self$putfile(url, fname, f = function(x) x$headers$location)
+      !is.null(self$putfile(url, fname, f = function(x) x))
     },
-    createLayer = function(workspace, datastore, layer, style) {
+    createLayer = function(workspace, datastore, layer, style, overwrite = FALSE) {
+      if (self$layerExists(workspace, layer))
+        if (overwrite)
+          self$deleteLayer(workspace, layer)
+        else
+          stop("Layer already exists, and overwrite = FALSE.")
+
       url <- sprintf(
         "%s/rest/workspaces/%s/datastores/%s/featuretypes",
         self$server, workspace, datastore
       )
       body <- list(featureType = list(name = layer, nativeName = datastore))
       res1 <- self$post(url, body = body, f = function(x) x$headers$location)
-      if (is.null(res1)) return(NULL)
-      message(sprintf("created: %s", res1))
+      if (is.null(res1))
+        stop("Failed to create featuretype.")
 
+      if (self$styleExists(workspace, style = layer))
+        self$deleteStyle(workspace, style)
       url <- sprintf(
         "%s/rest/workspaces/%s/styles?name=%s",
         self$server, workspace, layer
@@ -139,9 +150,8 @@ GeoServer <- R6::R6Class(
                         httr::content_type("application/vnd.ogc.sld+xml"))
       if (is.null(res2)) {
         self$deleteLayer(workspace, layer)
-        return(NULL)
+        stop("Failed to create style.")
       }
-      message("style created")
 
       url <- sprintf(
         "%s/rest/workspaces/%s/layers/%s",
@@ -158,11 +168,10 @@ GeoServer <- R6::R6Class(
       if (is.null(res3)) {
         self$deleteLayer(workspace, layer)
         self$deleteStyle(workspace, style)
-        return(NULL)
+        stop("Failed to apply style.")
       }
-      message("style applied")
 
-      res3
+      !(is.null(res3))
     },
 
     deleteWorkspace = function(workspace) {
@@ -241,7 +250,7 @@ GeoServer <- R6::R6Class(
       if (!res$status_code %in% okay) NULL
       else f(res)
     },
-    putfile = function(url, fname, okay = c(200), f = httr::content) {
+    putfile = function(url, fname, okay = c(201), f = function(x) x) {
       res <- httr::PUT(url, config = private$auth(), body = upload_file(fname))
       if (!res$status_code %in% okay) NULL
       else f(res)
