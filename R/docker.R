@@ -25,9 +25,9 @@ docker_build <- function(tag = "geoserver", build = FALSE) {
 #' @param run whether or not to start an instance
 #'
 #' @export
-docker_run <- function(image = "geoserver", name = "geoserver", port = 8080) {
+docker_run <- function(image = "geoserver", name = "geoserver", port = 8080, run = FALSE) {
   cmd <- sprintf("docker run -d --rm --name %s -p %s:8080 %s",
-                 name, port, image, run = FALSE)
+                 name, port, image)
   cat(sprintf("\n%s\n", cmd))
   if (run) system(cmd)
 }

@@ -137,7 +137,10 @@ GeoServer <- R6::R6Class(
       body <- style
       res2 <- self$post(url, body = style, f = function(x) x,
                         httr::content_type("application/vnd.ogc.sld+xml"))
-      if (is.null(res2)) return(NULL)
+      if (is.null(res2)) {
+        self$deleteLayer(workspace, layer)
+        return(NULL)
+      }
       message("style created")
 
       url <- sprintf(
@@ -152,22 +155,37 @@ GeoServer <- R6::R6Class(
           )
         )
       )
-      if (is.null(res3)) return(NULL)
+      if (is.null(res3)) {
+        self$deleteLayer(workspace, layer)
+        self$deleteStyle(workspace, style)
+        return(NULL)
+      }
       message("style applied")
 
       res3
     },
 
     deleteWorkspace = function(workspace) {
-      stop("Not implemented.")
+      if (!self$workspaceExists(workspace))
+        return(FALSE)
+      url <- sprintf("%s/rest/workspaces/%s?recurse=true",
+                     self$server, workspace)
+      res <- self$delete(url)
+      !is.null(res)
     },
     deleteDatastore = function(workspace, datastore) {
-      stop("Not implemented.")
+      if (!self$datastoreExists(workspace, datastore))
+        return(FALSE)
+      url <- sprintf("%s/rest/workspaces/%s/datastores/%s?recurse=true",
+                     self$server, workspace, datastore)
+      res <- self$delete(url)
+      !is.null(res)
     },
     deleteLayer = function(workspace, layer) {
       if (!self$layerExists(workspace, layer))
         return(FALSE)
-      url <- sprintf("%s/rest/workspaces/%s/layers/%s?recurse=true", self$server, workspace, layer)
+      url <- sprintf("%s/rest/workspaces/%s/layers/%s?recurse=true",
+                     self$server, workspace, layer)
       res <- self$delete(url)
       !is.null(res)
     },
