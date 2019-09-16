@@ -17,6 +17,8 @@ A good solution to the problem, that the spatial features we need to display are
 
 Specifically, we'll demonstrate how we can create new tile services on-the-fly entirely within R (though we could use any language capable of making HTTP calls and manipulating geospatial data&ndash;Python with geopandas, for example).
 
+**Note that there is already an R package, [`geosapi`](https://github.com/eblondel/geosapi), that provides what looks like a largely complete wrapper for the GeoServer REST API.**  I wasn't aware of it when I put this together.  The use case here is a bit different, but nevertheless could possibly have made use of the geosapi package.  A quick scan of the source also suggests upload of GeoPackage data isn't supported, though...
+
 
 ## A comment on spatial formats
 

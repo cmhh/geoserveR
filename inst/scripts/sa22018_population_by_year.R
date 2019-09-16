@@ -16,13 +16,19 @@ counts_wide <- counts %>%
 sa22018_with_counts <- sa22018 %>%
   inner_join(counts_wide, by = "code")
 
+View(sa22018_with_counts)
+
 # create layers ----------------------------------------------------------------
+# connection details
 gs <- GeoServer$new()
 
+# create a workspace
 gs$createWorkspace("statsnz")
 
+# upload the SA2s with counts
 gs$createDatastore(sa22018_with_counts, "statsnz", "sa22018_with_counts")
 
+# create a style for each available year
 years <- c(1996, 2001, 2006:2018)
 
 for (year in years) {
@@ -33,13 +39,14 @@ for (year in years) {
 }
 
 # map the results --------------------------------------------------------------
-
+# map, zoomed to NZ
 m <- leaflet() %>%
   fitBounds(lng1 = 164.45, lng2 = 179.35, lat1 = -48.52, lat2 = -33.22) %>%
   addTiles(
     urlTemplate = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
   )
 
+# add each of the new WMS layers
 for (year in years) {
   m <- m %>%
     addWMSTiles(
@@ -51,6 +58,7 @@ for (year in years) {
     hideGroup(as.character(year))
 }
 
+# add a little widget to allow toggling layers
 m <- m %>%
   addLayersControl(
     overlayGroups = as.character(years),
@@ -58,6 +66,7 @@ m <- m %>%
   ) %>%
   showGroup(as.character(tail(years, 1)))
 
+# show the map
 m
 
 # tidy up ----------------------------------------------------------------------
